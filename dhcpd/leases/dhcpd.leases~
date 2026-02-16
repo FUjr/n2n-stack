@@ -1,0 +1,31 @@
+# The format of this file is documented in the dhcpd.leases(5) manual page.
+# This lease file was written by isc-dhcp-4.4.3-P1
+
+# authoring-byte-order entry is generated, DO NOT DELETE
+authoring-byte-order little-endian;
+
+server-duid "\000\001\000\0011%3\005\002\000\000\000\000\001";
+
+lease 10.255.255.50 {
+  starts 1 2026/02/16 01:54:01;
+  ends 1 2026/02/16 02:04:01;
+  cltt 1 2026/02/16 01:54:01;
+  binding state active;
+  next binding state free;
+  rewind binding state free;
+  hardware ethernet 66:16:e4:c8:8f:e9;
+  uid "\377\332;\241\241\000\004T\026vx\035\242A\357\274\266\251+\363\022\241m";
+  set vendor-class-identifier = "udhcp 1.37.0";
+  client-hostname "ImmortalWrt";
+}
+lease 10.255.255.52 {
+  starts 1 2026/02/16 01:54:04;
+  ends 1 2026/02/16 02:04:04;
+  cltt 1 2026/02/16 01:54:04;
+  binding state active;
+  next binding state free;
+  rewind binding state free;
+  hardware ethernet 66:16:e4:c8:8f:e9;
+  uid "\001f\026\344\310\217\351";
+  set vendor-class-identifier = "udhcp 1.37.0";
+}

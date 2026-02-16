@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>DHCP Lease Viewer</title>
+<style>
+body { font-family: Arial; padding:20px; background:#f5f5f5 }
+table { border-collapse: collapse; width:100%; background:white }
+th, td { border:1px solid #ccc; padding:8px }
+th { background:#222; color:white }
+button { padding:8px 16px; margin-bottom:10px }
+</style>
+</head>
+
+<body>
+
+<h2>ISC DHCP Lease Table</h2>
+<button onclick="load()">Refresh</button>
+
+<table>
+<thead>
+<tr>
+<th>IP</th>
+<th>MAC</th>
+<th>Hostname</th>
+<th>Start</th>
+<th>End</th>
+<th>Remaining</th>
+<th>State</th>
+</tr>
+</thead>
+<tbody id="tb"></tbody>
+</table>
+
+<script>
+async function load(){
+  const r = await fetch('/leases/dhcpd.leases?_=' + Date.now());
+  const t = await r.text();
+  render(parse(t));
+}
+
+function parse(txt){
+  const cleaned = txt
+    .split("\n")
+    .filter(l => !l.trim().startsWith("#"))
+    .join("\n");
+  return cleaned.split("lease ").slice(1).map(b=>{
+    const ip=b.split("{")[0].trim();
+    const endText = m(b,/ends \d+ ([^;]+)/);
+    return {
+      ip,
+      mac:m(b,/hardware ethernet ([^;]+)/),
+      host:m(b,/client-hostname "([^"]+)"/),
+      start:m(b,/starts \d+ ([^;]+)/),
+      end:endText,
+      endDate:parseLeaseDate(endText),
+      state:m(b,/binding state ([^;]+)/)
+    };
+  });
+}
+
+function m(t,r){const x=t.match(r);return x?x[1]:""}
+
+function parseLeaseDate(s){
+  if(!s) return null;
+  const parts = s.trim().split(/\s+/);
+  if(parts.length < 2) return null;
+  const dateParts = parts[0].split("/").map(Number);
+  const timeParts = parts[1].split(":").map(Number);
+  if(dateParts.length !== 3 || timeParts.length !== 3) return null;
+  return new Date(dateParts[0], dateParts[1]-1, dateParts[2], timeParts[0], timeParts[1], timeParts[2]);
+}
+
+function formatRemaining(ms){
+  if(ms <= 0) return "expired";
+  const totalSeconds = Math.floor(ms / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const mins = Math.floor((totalSeconds % 3600) / 60);
+  const secs = totalSeconds % 60;
+  if(days > 0) return `${days}d ${hours}h ${mins}m`;
+  return `${hours}h ${mins}m ${secs}s`;
+}
+
+function render(rows){
+  const tb=document.getElementById("tb");
+  tb.innerHTML="";
+  rows.forEach(r=>{
+    const remaining = r.endDate ? formatRemaining(r.endDate - new Date()) : "";
+    tb.innerHTML+=`<tr>
+      <td>${r.ip}</td>
+      <td>${r.mac}</td>
+      <td>${r.host}</td>
+      <td>${r.start}</td>
+      <td>${r.end}</td>
+      <td data-end="${r.endDate ? r.endDate.toISOString() : ""}">${remaining}</td>
+      <td>${r.state}</td>
+    </tr>`;
+  });
+}
+
+setInterval(() => {
+  document.querySelectorAll("td[data-end]").forEach(td => {
+    const iso = td.getAttribute("data-end");
+    if(!iso) return;
+    const endDate = new Date(iso);
+    td.textContent = formatRemaining(endDate - new Date());
+  });
+}, 1000);
+
+load();
+</script>
+
+</body>
+</html>
