@@ -18,12 +18,18 @@ cat > /etc/n2n/edge.conf <<CFG
 -l ${SUPERNODE_HOST}:${SUPERNODE_PORT}
 -r
 -a ${EDGE_IP_ADDR}
--m ${N2N_EDGE_MAC}
+CFG
+
+if [ -n "${N2N_EDGE_MAC}" ]; then
+  echo "-m ${N2N_EDGE_MAC}" >> /etc/n2n/edge.conf
+fi
+
+cat >> /etc/n2n/edge.conf <<CFG
 -E
 CFG
 ADD_DEFAULT_GW="${EDGE_ADD_DEFAULT_GW:-false}"
 
-/usr/sbin/edge /etc/n2n/edge.conf -f &
+/usr/sbin/edge /etc/n2n/edge.conf -f ${EDGE_EXTRAPARAM} &
 EDGE_PID=$!
 
 if [ "$EDGE_MODE" = "edge" ]; then
