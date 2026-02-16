@@ -46,13 +46,15 @@ function parse(txt){
     .join("\n");
   return cleaned.split("lease ").slice(1).map(b=>{
     const ip=b.split("{")[0].trim();
+    const startText = m(b,/starts \d+ ([^;]+)/);
     const endText = m(b,/ends \d+ ([^;]+)/);
     return {
       ip,
       mac:m(b,/hardware ethernet ([^;]+)/),
       host:m(b,/client-hostname "([^"]+)"/),
-      start:m(b,/starts \d+ ([^;]+)/),
+      start:startText,
       end:endText,
+      startDate:parseLeaseDate(startText),
       endDate:parseLeaseDate(endText),
       state:m(b,/binding state ([^;]+)/)
     };
@@ -68,7 +70,20 @@ function parseLeaseDate(s){
   const dateParts = parts[0].split("/").map(Number);
   const timeParts = parts[1].split(":").map(Number);
   if(dateParts.length !== 3 || timeParts.length !== 3) return null;
-  return new Date(dateParts[0], dateParts[1]-1, dateParts[2], timeParts[0], timeParts[1], timeParts[2]);
+  // Lease file is written in UTC+0, parse as UTC time
+  return new Date(Date.UTC(dateParts[0], dateParts[1]-1, dateParts[2], timeParts[0], timeParts[1], timeParts[2]));
+}
+
+function formatLocalTime(dateObj){
+  if(!dateObj) return "";
+  const pad = (n) => String(n).padStart(2, '0');
+  const year = dateObj.getFullYear();
+  const month = pad(dateObj.getMonth() + 1);
+  const day = pad(dateObj.getDate());
+  const hours = pad(dateObj.getHours());
+  const mins = pad(dateObj.getMinutes());
+  const secs = pad(dateObj.getSeconds());
+  return `${year}/${month}/${day} ${hours}:${mins}:${secs}`;
 }
 
 function formatRemaining(ms){
@@ -86,13 +101,16 @@ function render(rows){
   const tb=document.getElementById("tb");
   tb.innerHTML="";
   rows.forEach(r=>{
-    const remaining = r.endDate ? formatRemaining(r.endDate - new Date()) : "";
+    const now = new Date();
+    const remaining = r.endDate ? formatRemaining(r.endDate - now) : "";
+    const startLocalTime = r.startDate ? formatLocalTime(r.startDate) : r.start;
+    const endLocalTime = r.endDate ? formatLocalTime(r.endDate) : r.end;
     tb.innerHTML+=`<tr>
       <td>${r.ip}</td>
       <td>${r.mac}</td>
       <td>${r.host}</td>
-      <td>${r.start}</td>
-      <td>${r.end}</td>
+      <td>${startLocalTime}</td>
+      <td>${endLocalTime}</td>
       <td data-end="${r.endDate ? r.endDate.toISOString() : ""}">${remaining}</td>
       <td>${r.state}</td>
     </tr>`;
